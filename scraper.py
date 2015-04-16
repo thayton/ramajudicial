@@ -28,7 +28,7 @@ class Scraper(object):
         self.br.open(self.url)
 
         s = BeautifulSoup(self.br.response().read())
-        saved_form = s.find('form', id='form1').prettify()
+        saved_form = s.find('form', id='form1')
         
         self.br.select_form(predicate=select_form)
         self.br.form.new_control('hidden', '__EVENTTARGET',   {'value': ''})
@@ -44,23 +44,27 @@ class Scraper(object):
 
         # Extract old div and insert new one from ajax response
         d = saved_form.find('div', id='upPanelCiudad')
-        s = BeautifulSoup(self.br.response().read())
+        r = self.br.response().read()
 
-        r = re.compile(r'VIEWSTATE\|([^|]+)')
-        m = re.search(r, str(s))
-        view_state = m.group(1)
+        it = iter(r.split('|'))
+        kv = dict(zip(it, it))
 
-        r = re.compile(r'upPanelCiudad\|([^|]+)')
-        m = re.search(r, str(s))
-        new_div = m.group(1)
+        import pprint 
+        pp = pprint.PrettyPrinter(indent=4)
+        pp.pprint(kv)
 
+        new_table = BeautifulSoup(kv['upPanelCiudad'])
+        old_table = d.table
+        old_table.replace_with(new_table)
 
         html = saved_form.encode('utf8')
         resp = mechanize.make_response(html, [("Content-Type", "text/html")],
                                        self.br.geturl(), 200, "OK")
+
         self.br.set_response(resp)
         self.br.select_form(predicate=select_form)
-        
+        self.br.form['__VIEWSTATE'] = kv['__VIEWSTATE'] # update viewstate
+
         print 'scraping...'
 
 if __name__ == '__main__':
