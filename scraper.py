@@ -38,7 +38,7 @@ class Scraper(object):
         self.br.form.fixup()
 
         self.br.form.set_all_readonly(False)
-        self.br.form['ddlCiudad'] = ['11001']
+        self.br.form['ddlCiudad'] = ['11001'] # Bogata, D.C.
         self.br.form['managerScript'] = 'upPanelCiudad|ddlCiudad' # div#id value followed by select control name
         self.br.submit()
 
@@ -63,7 +63,16 @@ class Scraper(object):
 
         self.br.set_response(resp)
         self.br.select_form(predicate=select_form)
+        self.br.form.set_all_readonly(False)
+
         self.br.form['__VIEWSTATE'] = kv['__VIEWSTATE'] # update viewstate
+        print self.br.form['rblConsulta'] 
+
+        ctl = self.br.form.find_control('ddlEntidadEspecialidad')
+        ctl.get(label='JUZGADOS CIVILES DEL CIRCUITO DE BOGOTA').selected = True
+        items = ctl.get_items()
+
+        self.br.submit()
 
         print 'scraping...'
 
