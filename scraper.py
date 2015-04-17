@@ -77,13 +77,12 @@ class Scraper(object):
         it = iter(r.split('|'))
         kv = dict(zip(it, it))
 
-        import pprint 
-        pp = pprint.PrettyPrinter(indent=4)
-        pp.pprint(kv)
-
         new_table = BeautifulSoup(kv['upPanelCiudad'])
         old_table = d.table
         old_table.replace_with(new_table)
+
+        # replace_with seems to break find operations so we reparse the tree
+        saved_form = soupify(saved_form.prettify())
 
         html = saved_form.encode('utf8')
         resp = mechanize.make_response(html, [("Content-Type", "text/html")],
@@ -123,6 +122,10 @@ class Scraper(object):
         old_div = saved_form.find('div', id='upPanelActuaciones')
         new_div = soupify(kv['upPanelActuaciones'])
         old_div.replace_with(new_div)        
+
+        f = open('result.html', 'w')
+        f.write(saved_form.prettify())
+        f.close()
 
         print 'break...'
 
