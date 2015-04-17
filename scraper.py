@@ -29,7 +29,17 @@ class Scraper(object):
 
         s = BeautifulSoup(self.br.response().read())
         saved_form = s.find('form', id='form1')
-        
+        saved_form.extract()
+
+        # 
+        # 1 - POST to get select options for <select name=ddlEntidadEspecialidad>
+        # 2 - Replace <table class="contenedor"> with table in AJAX response
+        # 3 - Select option for <select name=ddlEntidadEspecialidad>
+        # 4 - Enter filing number
+        # 5 - Click button btnConsultarNum
+        # 6 - Replace <div id="divActuaciones"> with div in AJAX response
+
+        # 1
         self.br.select_form(predicate=select_form)
         self.br.form.new_control('hidden', '__EVENTTARGET',   {'value': ''})
         self.br.form.new_control('hidden', '__EVENTARGUMENT', {'value': ''})
@@ -42,7 +52,7 @@ class Scraper(object):
         self.br.form['managerScript'] = 'upPanelCiudad|ddlCiudad' # div#id value followed by select control name
         self.br.submit()
 
-        # Extract old div and insert new one from ajax response
+        # 2
         d = saved_form.find('div', id='upPanelCiudad')
         r = self.br.response().read()
 
@@ -63,16 +73,26 @@ class Scraper(object):
 
         self.br.set_response(resp)
         self.br.select_form(predicate=select_form)
+        self.br.form.new_control('hidden', '__ASYNCPOST',     {'value': 'true'})
+        self.br.form.new_control('hidden', 'managerScript',   {'value': ''})
         self.br.form.set_all_readonly(False)
 
         self.br.form['__VIEWSTATE'] = kv['__VIEWSTATE'] # update viewstate
-        print self.br.form['rblConsulta'] 
+        self.br.form['managerScript'] = 'managerScript|btnConsultarNum' 
 
+        # 3
         ctl = self.br.form.find_control('ddlEntidadEspecialidad')
         ctl.get(label='JUZGADOS CIVILES DEL CIRCUITO DE BOGOTA').selected = True
-        items = ctl.get_items()
 
-        self.br.submit()
+        self.br.form['rblConsulta'] = ['1']
+        def select_control(ctl):
+            return ctl.attrs['maxlength'] == '23'
+
+        # tqsurrp4n5dcbu2dtnnzjkur
+        ctl = self.br.form.find_control(predicate=select_control)
+        self.br.form[ctl.name] = '11001310300220140043000'
+
+        self.br.submit(name='btnConsultarNum')
 
         print 'scraping...'
 
