@@ -123,8 +123,10 @@ class Scraper(object):
         new_div = soupify(kv['upPanelActuaciones'])
         old_div.replace_with(new_div)        
 
+        saved_form.find('div', id='panelActuaciones').attrs['style'] = 'display: block'
+
         f = open('result.html', 'w')
-        f.write(saved_form.prettify())
+        f.write(saved_form.prettify().encode('utf8'))
         f.close()
 
         print 'break...'
