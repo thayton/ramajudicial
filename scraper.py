@@ -12,6 +12,23 @@ from bs4 import BeautifulSoup, Comment, Tag
 
 URL = 'http://procesos.ramajudicial.gov.co/consultaprocesos/'
 
+def soupify(page):
+    s = BeautifulSoup(page)
+
+    # Remove unwanted tags
+    tags = s.findAll(lambda tag: tag.name == 'script' or \
+                                 tag.name == 'style')
+    for t in tags:
+        t.extract()
+        
+    # Remove comments
+    comments = s.findAll(text=lambda text:isinstance(text, Comment))
+    for c in comments:
+        c.extract()
+
+    # Remove entity references?
+    return s
+
 class Scraper(object):
     def __init__(self):
         self.br = mechanize.Browser()
@@ -27,7 +44,8 @@ class Scraper(object):
 
         self.br.open(self.url)
 
-        s = BeautifulSoup(self.br.response().read())
+        s = soupify(self.br.response().read())
+
         saved_form = s.find('form', id='form1')
         saved_form.extract()
 
@@ -73,8 +91,9 @@ class Scraper(object):
 
         self.br.set_response(resp)
         self.br.select_form(predicate=select_form)
-        self.br.form.new_control('hidden', '__ASYNCPOST',     {'value': 'true'})
-        self.br.form.new_control('hidden', 'managerScript',   {'value': ''})
+        self.br.form.new_control('hidden', '__ASYNCPOST',        {'value': 'true'})
+        self.br.form.new_control('hidden', 'managerScript',      {'value': ''})
+        self.br.form.new_control('hidden', 'txtNumeroProcesoID', {'value': ''}) # why doesn't mechanize pick this up?
         self.br.form.set_all_readonly(False)
 
         self.br.form['__VIEWSTATE'] = kv['__VIEWSTATE'] # update viewstate
@@ -86,15 +105,26 @@ class Scraper(object):
 
         self.br.form['rblConsulta'] = ['1']
         def select_control(ctl):
-            return ctl.attrs['maxlength'] == '23'
+            return ctl.attrs.get('maxlength', None) == '23'
 
         # tqsurrp4n5dcbu2dtnnzjkur
         ctl = self.br.form.find_control(predicate=select_control)
         self.br.form[ctl.name] = '11001310300220140043000'
-
+        self.br.form.find_control('tbxNumeroConstruido').disabled = False
+        self.br.form['tbxNumeroConstruido'] = self.br.form[ctl.name][0:9]
+        self.br.form['txtNumeroProcesoID'] = ctl.name
         self.br.submit(name='btnConsultarNum')
 
-        print 'scraping...'
+        r = self.br.response().read()
+
+        it = iter(r.split('|'))
+        kv = dict(zip(it, it))
+        
+        old_div = saved_form.find('div', id='upPanelActuaciones')
+        new_div = soupify(kv['upPanelActuaciones'])
+        old_div.replace_with(new_div)        
+
+        print 'break...'
 
 if __name__ == '__main__':
     scraper = Scraper()
